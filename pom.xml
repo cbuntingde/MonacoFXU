@@ -89,7 +89,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>eu.mihosoft.monacofx.demo.App</mainClass>
+                    <mainClass>eu.mihosoft.monacofx.demo.DemoApp</mainClass>
                 </configuration>
             </plugin>
 

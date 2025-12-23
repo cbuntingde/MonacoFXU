@@ -7,26 +7,71 @@
 -->
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
     <style type="text/css">
-        html, body {
+        html,
+        body {
             height: 100%;
             margin: 0;
             padding: 0;
             overflow: hidden;
         }
+
         #container {
             width: 100%;
             height: 100%;
         }
+
         #diff-container {
             width: 100%;
             height: 100%;
             display: none;
         }
+
+        /* Decoration styles */
+        .squiggly-error {
+            background: rgba(255, 0, 0, 0.2);
+        }
+
+        .squiggly-warning {
+            background: rgba(255, 200, 0, 0.2);
+        }
+
+        .squiggly-info {
+            background: rgba(0, 150, 255, 0.1);
+        }
+
+        .error-text {
+            text-decoration: underline wavy red;
+        }
+
+        .warning-text {
+            text-decoration: underline wavy #cca700;
+        }
+
+        .line-highlight-info {
+            background: rgba(0, 122, 204, 0.15);
+        }
+
+        .glyph-info {
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%230078d4'/%3E%3Ctext x='8' y='12' text-anchor='middle' fill='white' font-size='10' font-weight='bold'%3Ei%3C/text%3E%3C/svg%3E") center center no-repeat;
+            background-size: contain;
+        }
+
+        .glyph-error {
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%23f44336'/%3E%3Ctext x='8' y='12' text-anchor='middle' fill='white' font-size='10' font-weight='bold'%3E!%3C/text%3E%3C/svg%3E") center center no-repeat;
+            background-size: contain;
+        }
+
+        .glyph-warning {
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1L15 14H1Z' fill='%23ff9800'/%3E%3Ctext x='8' y='13' text-anchor='middle' fill='white' font-size='8' font-weight='bold'%3E!%3C/text%3E%3C/svg%3E") center center no-repeat;
+            background-size: contain;
+        }
     </style>
 </head>
+
 <body>
     <div id="container"></div>
     <div id="diff-container"></div>
@@ -42,18 +87,18 @@
         var decorationIds = [];
 
         // Configure AMD loader
-        require.config({ 
+        require.config({
             paths: { 'vs': './min/vs' }
         });
 
         // Initialize standard editor
-        require(['vs/editor/editor.main'], function() {
+        require(['vs/editor/editor.main'], function () {
             editorView = monaco.editor.create(document.getElementById('container'), {
                 value: '',
                 language: 'javascript',
                 theme: 'vs-dark',
                 automaticLayout: true,
-                
+
                 // Modern features
                 minimap: {
                     enabled: true,
@@ -68,20 +113,20 @@
                     enabled: true,
                     independentColorPoolPerBracketType: true
                 },
-                
+
                 // Scrolling
                 scrollBeyondLastLine: false,
                 mouseWheelScrollSensitivity: 0.5,
                 smoothScrolling: true,
-                
+
                 // UI
                 roundedSelection: true,
                 cursorBlinking: 'smooth',
                 cursorSmoothCaretAnimation: 'on',
-                
+
                 // Accessibility
                 accessibilitySupport: 'auto',
-                
+
                 scrollbar: {
                     useShadows: true,
                     verticalHasArrows: false,
@@ -98,14 +143,14 @@
             if (typeof clipboardBridge !== 'undefined') {
                 let copyAction = editorView.getAction('editor.action.clipboardCopyAction');
                 if (copyAction) {
-                    copyAction.run = function() {
+                    copyAction.run = function () {
                         clipboardBridge.copy(editorView.getSelection());
                     };
                 }
 
                 let cutAction = editorView.getAction('editor.action.clipboardCutAction');
                 if (cutAction) {
-                    cutAction.run = function() {
+                    cutAction.run = function () {
                         clipboardBridge.copy(editorView.getSelection());
                         editorView.trigger('', 'cut');
                     };
@@ -117,7 +162,7 @@
                     label: "Paste",
                     contextMenuGroupId: "9_cutcopypaste",
                     contextMenuOrder: 3,
-                    run: function(editor) {
+                    run: function (editor) {
                         let position = editor.getPosition();
                         let newPosition = clipboardBridge.paste(editor.getSelection(), position);
                         editor.setPosition(newPosition);
@@ -127,21 +172,21 @@
             }
 
             // Content change listener
-            editorView.onDidChangeModelContent(function(ev) {
+            editorView.onDidChangeModelContent(function (ev) {
                 if (contentChangeListener) {
                     contentChangeListener.apply([ev]);
                 }
             });
 
             // Scroll change listener
-            editorView.onDidScrollChange(function(ev) {
+            editorView.onDidScrollChange(function (ev) {
                 if (scrollChangeListener) {
                     scrollChangeListener.apply([ev]);
                 }
             });
 
             // Cursor position change listener
-            editorView.onDidChangeCursorPosition(function(ev) {
+            editorView.onDidChangeCursorPosition(function (ev) {
                 if (cursorChangeListener) {
                     cursorChangeListener.apply([ev]);
                 }
@@ -239,7 +284,7 @@
             }
 
             diffEditorView = monaco.editor.createDiffEditor(
-                document.getElementById('diff-container'), 
+                document.getElementById('diff-container'),
                 {
                     automaticLayout: true,
                     renderSideBySide: true,
@@ -284,7 +329,7 @@
             inlineCompletionProvider = monaco.languages.registerInlineCompletionsProvider(
                 languages,
                 {
-                    provideInlineCompletions: function(model, position, context, token) {
+                    provideInlineCompletions: function (model, position, context, token) {
                         if (typeof javaInlineCompletionProvider !== 'undefined') {
                             const textBeforeCursor = model.getValueInRange({
                                 startLineNumber: 1,
@@ -292,20 +337,20 @@
                                 endLineNumber: position.lineNumber,
                                 endColumn: position.column
                             });
-                            
+
                             const result = javaInlineCompletionProvider.provide(
                                 textBeforeCursor,
                                 position.lineNumber,
                                 position.column
                             );
-                            
+
                             if (result) {
                                 return JSON.parse(result);
                             }
                         }
                         return { items: [] };
                     },
-                    freeInlineCompletions: function(completions) {
+                    freeInlineCompletions: function (completions) {
                         // Cleanup if needed
                     }
                 }
@@ -325,7 +370,7 @@
                 language,
                 {
                     triggerCharacters: triggerCharacters ? JSON.parse(triggerCharacters) : ['.'],
-                    provideCompletionItems: function(model, position, context, token) {
+                    provideCompletionItems: function (model, position, context, token) {
                         if (typeof javaCompletionProvider !== 'undefined') {
                             const textUntilPosition = model.getValueInRange({
                                 startLineNumber: 1,
@@ -333,7 +378,7 @@
                                 endLineNumber: position.lineNumber,
                                 endColumn: position.column
                             });
-                            
+
                             const result = javaCompletionProvider.provide(
                                 language,
                                 textUntilPosition,
@@ -341,7 +386,7 @@
                                 position.column,
                                 context.triggerCharacter || ''
                             );
-                            
+
                             if (result) {
                                 return JSON.parse(result);
                             }
@@ -364,7 +409,7 @@
             colorProviders[language] = monaco.languages.registerColorProvider(
                 language,
                 {
-                    provideDocumentColors: function(model, token) {
+                    provideDocumentColors: function (model, token) {
                         if (typeof javaColorProvider !== 'undefined') {
                             const result = javaColorProvider.provideColors(language, model.getValue());
                             if (result) {
@@ -373,7 +418,7 @@
                         }
                         return [];
                     },
-                    provideColorPresentations: function(model, colorInfo, token) {
+                    provideColorPresentations: function (model, colorInfo, token) {
                         if (typeof javaColorProvider !== 'undefined') {
                             const result = javaColorProvider.provideColorPresentations(
                                 language,
@@ -428,4 +473,5 @@
 
     </script>
 </body>
+
 </html>
