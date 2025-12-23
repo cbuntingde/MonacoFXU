@@ -2,9 +2,18 @@
 
 > ⚠️ **Updated December 2025**: This project was originally created 4-5 years ago by [Michael Hoffer](https://github.com/miho). It has been updated by **Chris Bunting** to use Monaco Editor 0.52.0 with modern features. **This update has not yet been fully tested.**
 
-JavaFX editor node based on the powerful [Monaco Editor](https://microsoft.github.io/monaco-editor/) that drives [VS Code](https://github.com/Microsoft/vscode).
+A powerful JavaFX wrapper for the [Monaco Editor](https://microsoft.github.io/monaco-editor/) — the same editor that powers [VS Code](https://github.com/Microsoft/vscode).
 
-<img src="resources/img/screenshot.png">
+<table>
+<tr>
+<td><img src="resources/img/editor.png" alt="Editor View"></td>
+<td><img src="resources/img/diff-editor.png" alt="Diff Editor View"></td>
+</tr>
+<tr>
+<td align="center"><b>Code Editor</b> with minimap, syntax highlighting, bracket colorization</td>
+<td align="center"><b>Diff Editor</b> with side-by-side comparison</td>
+</tr>
+</table>
 
 ## Original Author
 
@@ -13,96 +22,110 @@ This project was created by **[Michael Hoffer](https://github.com/miho)** ([@mia
 - Original Repository: [github.com/miho/MonacoFX](https://github.com/miho/MonacoFX)
 - Website: [michaelhoffer.de](https://michaelhoffer.de)
 
-## What's New (v0.2.0)
+---
 
-- **Monaco Editor 0.52.0** (upgraded from 0.20.0)
-- **JDK 17+ / JavaFX 21** support
-- **Maven build** (replaced Gradle)
-- **New Features:**
-  - Minimap with section headers
-  - Bracket pair colorization
-  - Sticky scroll
-  - Diff Editor (side-by-side & inline)
-  - Decorations API (error highlighting)
-  - Markers API (diagnostics/linting)
-  - Inline Completions (AI ghost text)
-  - Custom IntelliSense providers
+## Features
 
-## Using MonacoFX
+### Editor Features
+| Feature | Description |
+|---------|-------------|
+| **Monaco 0.52.0** | Latest stable Monaco Editor with AMD loader |
+| **Syntax Highlighting** | 50+ languages built-in |
+| **Minimap** | Code overview with section headers |
+| **Bracket Pair Colorization** | Colored matching brackets |
+| **Sticky Scroll** | Keep scope headers visible |
+| **Diff Editor** | Side-by-side and inline diff views |
+| **Multiple Themes** | vs-dark, vs-light, hc-black |
 
-### Basic Editor
+### API Features
+| Feature | Class | Description |
+|---------|-------|-------------|
+| **Editor Options** | `EditorOptions` | Configure minimap, fonts, scrolling, etc. |
+| **Decorations** | `DecorationsService` | Add error underlines, highlights |
+| **Markers** | `MarkersService` | Linting diagnostics (errors, warnings) |
+| **Hover** | `HoverProvider` | Show tooltips on hover |
+| **Completion** | `CompletionItemProvider` | Custom IntelliSense |
+| **Inline Completion** | `InlineCompletionProvider` | AI ghost text suggestions |
+| **Go to Definition** | `DefinitionProvider` | Ctrl+Click navigation |
+| **Color Picker** | `DocumentColorProvider` | Color swatches for CSS |
+| **Find/Replace** | `FindReplaceService` | Search operations |
+| **Cursor** | `CursorService` | Position and selection |
+
+---
+
+## Quick Start
+
+### Requirements
+- **JDK 17+**
+- **Maven 3.8+**
+
+### Maven Dependency
+```xml
+<dependency>
+    <groupId>eu.mihosoft.monacofx</groupId>
+    <artifactId>monacofx</artifactId>
+    <version>0.2.0</version>
+</dependency>
+```
+
+### Basic Usage
 
 ```java
+import eu.mihosoft.monacofx.*;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+
 public class App extends Application {
 
-    public static void main(String[] args) {
-        launch(args);
-    }
-
     @Override
-    public void start(Stage primaryStage) {
-        // Create editor
-        MonacoFX monacoFX = new MonacoFX();
-        StackPane root = new StackPane(monacoFX);
-
+    public void start(Stage stage) {
+        MonacoFX editor = new MonacoFX();
+        
         // Set content and language
-        monacoFX.getEditor().getDocument().setText(
-            "public class Hello {\n" +
-            "    public static void main(String[] args) {\n" +
-            "        System.out.println(\"Hello, World!\");\n" +
-            "    }\n" +
-            "}"
-        );
-        monacoFX.getEditor().setCurrentLanguage("java");
-        monacoFX.getEditor().setCurrentTheme("vs-dark");
-
-        // Configure modern features
-        monacoFX.getEditor().setOptions(EditorOptions.builder()
+        editor.getEditor().getDocument().setText("console.log('Hello, Monaco!');");
+        editor.getEditor().setCurrentLanguage("javascript");
+        editor.getEditor().setCurrentTheme("vs-dark");
+        
+        // Apply modern options
+        editor.getEditor().setOptions(EditorOptions.builder()
             .minimap(true)
-            .minimapShowRegionSectionHeaders(true)
             .stickyScroll(true)
             .bracketPairColorization(true)
             .build()
         );
-
-        Scene scene = new Scene(root, 800, 600);
-        primaryStage.setTitle("MonacoFX Demo");
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        
+        stage.setScene(new Scene(new StackPane(editor), 800, 600));
+        stage.show();
     }
 }
 ```
 
-### Diff Editor
+---
 
+## Examples
+
+### Diff Editor
 ```java
 DiffEditorFX diffEditor = new DiffEditorFX();
-
 diffEditor.getDiffEditor().setOriginal("Hello World", "text");
 diffEditor.getDiffEditor().setModified("Hello Monaco World", "text");
 diffEditor.getDiffEditor().setInlineView(false); // side-by-side
 ```
 
-### Error Highlighting (Decorations)
-
+### Error Highlighting
 ```java
-Editor editor = monacoFX.getEditor();
-
-// Add error decoration
-String[] ids = editor.getDecorationsService().addDecorations(
+editor.getDecorationsService().addDecorations(
     Decoration.builder()
         .range(5, 1, 5, 20)
-        .className("error-underline")
+        .className("squiggly-error")
         .hoverMessage("Undefined variable")
         .build()
 );
-
-// Remove later
-editor.getDecorationsService().removeDecorations(ids);
 ```
 
-### Linting (Markers)
-
+### Linting Markers
 ```java
 editor.getMarkersService().setMarkers("myLinter",
     Marker.error("Syntax error", 10, 5, 10, 15),
@@ -110,24 +133,43 @@ editor.getMarkersService().setMarkers("myLinter",
 );
 ```
 
+### Custom IntelliSense
+```java
+editor.setCompletionProvider("java", (text, position, trigger) -> {
+    return List.of(
+        CompletionItem.builder()
+            .label("System.out.println")
+            .kind(CompletionItemKind.METHOD)
+            .insertText("System.out.println($1);")
+            .build()
+    );
+});
+```
+
+### Go to Definition
+```java
+editor.setDefinitionProvider("java", (text, position, word) -> {
+    // Return location of symbol definition
+    return List.of(new Location(new Range(100, 1, 100, 20)));
+});
+```
+
+---
+
 ## Building
 
-### Requirements
-
-- JDK 17+
-- Maven 3.8+
-
-### Build
-
 ```bash
-mvn clean package
-```
+# Compile
+mvn clean compile
 
-### Run Sample
-
-```bash
+# Run demo app
 mvn javafx:run
+
+# Package JAR
+mvn package
 ```
+
+---
 
 ## License
 
@@ -135,5 +177,5 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Acknowledgments
 
-- **Michael Hoffer** - Original MonacoFX creator
-- **Microsoft** - Monaco Editor
+- **Michael Hoffer** — Original MonacoFX creator
+- **Microsoft** — Monaco Editor
