@@ -1,0 +1,431 @@
+<!--
+    MIT License
+    Copyright (c) 2020-2024 Michael Hoffer <info@michaelhoffer.de>. All rights reserved.
+    
+    MonacoFX - JavaFX wrapper for Monaco Editor
+    Updated for Monaco 0.52.0
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <style type="text/css">
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #container {
+            width: 100%;
+            height: 100%;
+        }
+        #diff-container {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="diff-container"></div>
+
+    <script src="./min/vs/loader.js"></script>
+    <script>
+        // Global references
+        var editorView = null;
+        var diffEditorView = null;
+        var contentChangeListener = null;
+        var scrollChangeListener = null;
+        var cursorChangeListener = null;
+        var decorationIds = [];
+
+        // Configure AMD loader
+        require.config({ 
+            paths: { 'vs': './min/vs' }
+        });
+
+        // Initialize standard editor
+        require(['vs/editor/editor.main'], function() {
+            editorView = monaco.editor.create(document.getElementById('container'), {
+                value: '',
+                language: 'javascript',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                
+                // Modern features
+                minimap: {
+                    enabled: true,
+                    showRegionSectionHeaders: true,
+                    sectionHeaderFontSize: 10
+                },
+                stickyScroll: {
+                    enabled: true,
+                    maxLineCount: 5
+                },
+                bracketPairColorization: {
+                    enabled: true,
+                    independentColorPoolPerBracketType: true
+                },
+                
+                // Scrolling
+                scrollBeyondLastLine: false,
+                mouseWheelScrollSensitivity: 0.5,
+                smoothScrolling: true,
+                
+                // UI
+                roundedSelection: true,
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+                
+                // Accessibility
+                accessibilitySupport: 'auto',
+                
+                scrollbar: {
+                    useShadows: true,
+                    verticalHasArrows: false,
+                    horizontalHasArrows: false,
+                    vertical: 'auto',
+                    horizontal: 'auto',
+                    verticalScrollbarSize: 14,
+                    horizontalScrollbarSize: 14,
+                    alwaysConsumeMouseWheel: false
+                }
+            });
+
+            // Override copy action for JavaFX clipboard bridge
+            if (typeof clipboardBridge !== 'undefined') {
+                let copyAction = editorView.getAction('editor.action.clipboardCopyAction');
+                if (copyAction) {
+                    copyAction.run = function() {
+                        clipboardBridge.copy(editorView.getSelection());
+                    };
+                }
+
+                let cutAction = editorView.getAction('editor.action.clipboardCutAction');
+                if (cutAction) {
+                    cutAction.run = function() {
+                        clipboardBridge.copy(editorView.getSelection());
+                        editorView.trigger('', 'cut');
+                    };
+                }
+
+                // Add paste action
+                editorView.addAction({
+                    id: "editor.action.clipboardPasteAction",
+                    label: "Paste",
+                    contextMenuGroupId: "9_cutcopypaste",
+                    contextMenuOrder: 3,
+                    run: function(editor) {
+                        let position = editor.getPosition();
+                        let newPosition = clipboardBridge.paste(editor.getSelection(), position);
+                        editor.setPosition(newPosition);
+                        editor.focus();
+                    }
+                });
+            }
+
+            // Content change listener
+            editorView.onDidChangeModelContent(function(ev) {
+                if (contentChangeListener) {
+                    contentChangeListener.apply([ev]);
+                }
+            });
+
+            // Scroll change listener
+            editorView.onDidScrollChange(function(ev) {
+                if (scrollChangeListener) {
+                    scrollChangeListener.apply([ev]);
+                }
+            });
+
+            // Cursor position change listener
+            editorView.onDidChangeCursorPosition(function(ev) {
+                if (cursorChangeListener) {
+                    cursorChangeListener.apply([ev]);
+                }
+            });
+
+            // Signal that editor is ready
+            if (typeof editorCreatedCallback !== 'undefined' && editorCreatedCallback) {
+                editorCreatedCallback.apply([editorView]);
+            }
+        });
+
+        // ========== Editor API Functions ==========
+
+        function getEditorView() {
+            return editorView;
+        }
+
+        function getDiffEditorView() {
+            return diffEditorView;
+        }
+
+        function undo() {
+            editorView.trigger('keyboard', 'undo');
+            editorView.focus();
+        }
+
+        function redo() {
+            editorView.trigger('keyboard', 'redo');
+            editorView.focus();
+        }
+
+        function updateText(text) {
+            const fullRange = editorView.getModel().getFullModelRange();
+            editorView.executeEdits(null, [{
+                text: text,
+                range: fullRange
+            }]);
+            editorView.pushUndoStop();
+        }
+
+        // ========== Editor Options API ==========
+
+        function setEditorOptions(optionsJson) {
+            const options = JSON.parse(optionsJson);
+            editorView.updateOptions(options);
+        }
+
+        function setTheme(themeName) {
+            monaco.editor.setTheme(themeName);
+        }
+
+        function setLanguage(language) {
+            monaco.editor.setModelLanguage(editorView.getModel(), language);
+        }
+
+        // ========== Decorations API ==========
+
+        function addDecorations(decorationsJson) {
+            const decorations = JSON.parse(decorationsJson);
+            const newIds = editorView.deltaDecorations([], decorations);
+            decorationIds = decorationIds.concat(newIds);
+            return JSON.stringify(newIds);
+        }
+
+        function removeDecorations(idsJson) {
+            const ids = JSON.parse(idsJson);
+            editorView.deltaDecorations(ids, []);
+            decorationIds = decorationIds.filter(id => !ids.includes(id));
+        }
+
+        function clearAllDecorations() {
+            editorView.deltaDecorations(decorationIds, []);
+            decorationIds = [];
+        }
+
+        // ========== Markers API (Diagnostics) ==========
+
+        function setMarkers(owner, markersJson) {
+            const markers = JSON.parse(markersJson);
+            monaco.editor.setModelMarkers(editorView.getModel(), owner, markers);
+        }
+
+        function clearMarkers(owner) {
+            monaco.editor.setModelMarkers(editorView.getModel(), owner, []);
+        }
+
+        // ========== Diff Editor API ==========
+
+        function createDiffEditor(originalText, modifiedText, language) {
+            document.getElementById('container').style.display = 'none';
+            document.getElementById('diff-container').style.display = 'block';
+
+            if (diffEditorView) {
+                diffEditorView.dispose();
+            }
+
+            diffEditorView = monaco.editor.createDiffEditor(
+                document.getElementById('diff-container'), 
+                {
+                    automaticLayout: true,
+                    renderSideBySide: true,
+                    originalEditable: false,
+                    readOnly: true
+                }
+            );
+
+            const originalModel = monaco.editor.createModel(originalText, language);
+            const modifiedModel = monaco.editor.createModel(modifiedText, language);
+
+            diffEditorView.setModel({
+                original: originalModel,
+                modified: modifiedModel
+            });
+        }
+
+        function setDiffEditorInlineMode(inline) {
+            if (diffEditorView) {
+                diffEditorView.updateOptions({ renderSideBySide: !inline });
+            }
+        }
+
+        function disposeDiffEditor() {
+            if (diffEditorView) {
+                diffEditorView.dispose();
+                diffEditorView = null;
+            }
+            document.getElementById('diff-container').style.display = 'none';
+            document.getElementById('container').style.display = 'block';
+        }
+
+        // ========== Inline Completions API ==========
+
+        var inlineCompletionProvider = null;
+
+        function registerInlineCompletionProvider(languages) {
+            if (inlineCompletionProvider) {
+                inlineCompletionProvider.dispose();
+            }
+
+            inlineCompletionProvider = monaco.languages.registerInlineCompletionsProvider(
+                languages,
+                {
+                    provideInlineCompletions: function(model, position, context, token) {
+                        if (typeof javaInlineCompletionProvider !== 'undefined') {
+                            const textBeforeCursor = model.getValueInRange({
+                                startLineNumber: 1,
+                                startColumn: 1,
+                                endLineNumber: position.lineNumber,
+                                endColumn: position.column
+                            });
+                            
+                            const result = javaInlineCompletionProvider.provide(
+                                textBeforeCursor,
+                                position.lineNumber,
+                                position.column
+                            );
+                            
+                            if (result) {
+                                return JSON.parse(result);
+                            }
+                        }
+                        return { items: [] };
+                    },
+                    freeInlineCompletions: function(completions) {
+                        // Cleanup if needed
+                    }
+                }
+            );
+        }
+
+        // ========== Completion Item Provider API ==========
+
+        var completionProviders = {};
+
+        function registerCompletionProvider(language, triggerCharacters) {
+            if (completionProviders[language]) {
+                completionProviders[language].dispose();
+            }
+
+            completionProviders[language] = monaco.languages.registerCompletionItemProvider(
+                language,
+                {
+                    triggerCharacters: triggerCharacters ? JSON.parse(triggerCharacters) : ['.'],
+                    provideCompletionItems: function(model, position, context, token) {
+                        if (typeof javaCompletionProvider !== 'undefined') {
+                            const textUntilPosition = model.getValueInRange({
+                                startLineNumber: 1,
+                                startColumn: 1,
+                                endLineNumber: position.lineNumber,
+                                endColumn: position.column
+                            });
+                            
+                            const result = javaCompletionProvider.provide(
+                                language,
+                                textUntilPosition,
+                                position.lineNumber,
+                                position.column,
+                                context.triggerCharacter || ''
+                            );
+                            
+                            if (result) {
+                                return JSON.parse(result);
+                            }
+                        }
+                        return { suggestions: [] };
+                    }
+                }
+            );
+        }
+
+        // ========== Document Color Provider API ==========
+
+        var colorProviders = {};
+
+        function registerColorProvider(language) {
+            if (colorProviders[language]) {
+                colorProviders[language].dispose();
+            }
+
+            colorProviders[language] = monaco.languages.registerColorProvider(
+                language,
+                {
+                    provideDocumentColors: function(model, token) {
+                        if (typeof javaColorProvider !== 'undefined') {
+                            const result = javaColorProvider.provideColors(language, model.getValue());
+                            if (result) {
+                                return JSON.parse(result);
+                            }
+                        }
+                        return [];
+                    },
+                    provideColorPresentations: function(model, colorInfo, token) {
+                        if (typeof javaColorProvider !== 'undefined') {
+                            const result = javaColorProvider.provideColorPresentations(
+                                language,
+                                JSON.stringify(colorInfo.color),
+                                JSON.stringify(colorInfo.range)
+                            );
+                            if (result) {
+                                return JSON.parse(result);
+                            }
+                        }
+                        return [];
+                    }
+                }
+            );
+        }
+
+        // ========== Cursor and Selection API ==========
+
+        function getCursorPosition() {
+            const pos = editorView.getPosition();
+            return JSON.stringify({ lineNumber: pos.lineNumber, column: pos.column });
+        }
+
+        function setCursorPosition(lineNumber, column) {
+            editorView.setPosition({ lineNumber: lineNumber, column: column });
+            editorView.focus();
+        }
+
+        function getSelection() {
+            const sel = editorView.getSelection();
+            return JSON.stringify(sel);
+        }
+
+        function setSelection(startLine, startCol, endLine, endCol) {
+            editorView.setSelection({
+                startLineNumber: startLine,
+                startColumn: startCol,
+                endLineNumber: endLine,
+                endColumn: endCol
+            });
+        }
+
+        function revealLine(lineNumber) {
+            editorView.revealLineInCenter(lineNumber);
+        }
+
+        // ========== Focus API ==========
+
+        function focusEditor() {
+            editorView.focus();
+        }
+
+    </script>
+</body>
+</html>

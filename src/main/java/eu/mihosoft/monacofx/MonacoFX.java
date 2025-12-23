@@ -41,7 +41,7 @@ public class MonacoFX extends Region {
     private final WebView view;
     private final WebEngine engine;
 
-    private final static String EDITOR_HTML_RESOURCE_LOCATION = "/eu/mihosoft/monacofx/monaco-editor-0.20.0/index.html";
+    private final static String EDITOR_HTML_RESOURCE_LOCATION = "/eu/mihosoft/monacofx/monaco-editor-0.52.0/index.html";
 
     private final Editor editor;
     private final SystemClipboardWrapper systemClipboardWrapper;

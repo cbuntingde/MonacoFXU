@@ -46,9 +46,15 @@ public final class Editor {
     private final StringProperty currentThemeProperty = new SimpleStringProperty();
     private final StringProperty currentLanguageProperty = new SimpleStringProperty();
 
+    // New services
+    private DecorationsService decorationsService;
+    private MarkersService markersService;
+
     Editor(WebEngine engine) {
         this.engine = engine;
         this.viewController = new ViewController(this);
+        this.decorationsService = new DecorationsService(this);
+        this.markersService = new MarkersService(this);
         Document document = new Document();
         setDocument(document);
     }
@@ -202,5 +208,38 @@ public final class Editor {
         this.themes.add(theme);
     }
 
+    // ========== New API Methods ==========
+
+    /**
+     * Apply editor options (minimap, sticky scroll, bracket colorization, etc.).
+     */
+    public void setOptions(EditorOptions options) {
+        if (window != null) {
+            window.call("setEditorOptions", options.toJson());
+        }
+    }
+
+    /**
+     * Get the decorations service for adding visual annotations.
+     */
+    public DecorationsService getDecorationsService() {
+        return decorationsService;
+    }
+
+    /**
+     * Get the markers service for adding error/warning diagnostics.
+     */
+    public MarkersService getMarkersService() {
+        return markersService;
+    }
+
+    /**
+     * Focus the editor.
+     */
+    public void focus() {
+        if (window != null) {
+            window.call("focusEditor");
+        }
+    }
 
 }

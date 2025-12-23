@@ -1,0 +1,111 @@
+<!--
+    MIT License
+    Copyright (c) 2020-2024 Michael Hoffer <info@michaelhoffer.de>. All rights reserved.
+    
+    MonacoFX - Diff Editor HTML
+-->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <style type="text/css">
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container"></div>
+
+    <script src="./min/vs/loader.js"></script>
+    <script>
+        var diffEditorView = null;
+        var originalModel = null;
+        var modifiedModel = null;
+
+        require.config({
+            paths: { 'vs': './min/vs' }
+        });
+
+        require(['vs/editor/editor.main'], function () {
+            diffEditorView = monaco.editor.createDiffEditor(
+                document.getElementById('container'),
+                {
+                    automaticLayout: true,
+                    renderSideBySide: true,
+                    originalEditable: false,
+                    readOnly: false,
+
+                    // Modern features
+                    minimap: { enabled: true },
+                    stickyScroll: { enabled: true },
+                    bracketPairColorization: { enabled: true },
+
+                    // Rendering
+                    renderOverviewRuler: true,
+
+                    // Scrolling
+                    scrollBeyondLastLine: false,
+                    smoothScrolling: true
+                }
+            );
+
+            // Set default empty model
+            originalModel = monaco.editor.createModel('', 'text');
+            modifiedModel = monaco.editor.createModel('', 'text');
+
+            diffEditorView.setModel({
+                original: originalModel,
+                modified: modifiedModel
+            });
+        });
+
+        function getDiffEditorView() {
+            return diffEditorView;
+        }
+
+        function setDiffModel(originalText, modifiedText, language) {
+            if (diffEditorView) {
+                // Dispose old models
+                if (originalModel) originalModel.dispose();
+                if (modifiedModel) modifiedModel.dispose();
+
+                // Create new models
+                originalModel = monaco.editor.createModel(originalText, language);
+                modifiedModel = monaco.editor.createModel(modifiedText, language);
+
+                diffEditorView.setModel({
+                    original: originalModel,
+                    modified: modifiedModel
+                });
+            }
+        }
+
+        function setDiffEditorInlineMode(inline) {
+            if (diffEditorView) {
+                diffEditorView.updateOptions({ renderSideBySide: !inline });
+            }
+        }
+
+        function setDiffEditorOptions(optionsJson) {
+            if (diffEditorView) {
+                const options = JSON.parse(optionsJson);
+                diffEditorView.updateOptions(options);
+            }
+        }
+
+    </script>
+</body>
+
+</html>
