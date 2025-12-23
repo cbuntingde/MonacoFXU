@@ -471,6 +471,100 @@
             editorView.focus();
         }
 
+        // ========== Find/Replace API ==========
+
+        function openFind() {
+            editorView.getAction('actions.find').run();
+        }
+
+        function openFindReplace() {
+            editorView.getAction('editor.action.startFindReplaceAction').run();
+        }
+
+        function closeFind() {
+            editorView.trigger('keyboard', 'closeFindWidget');
+        }
+
+        function findNext(searchTerm) {
+            const findController = editorView.getContribution('editor.contrib.findController');
+            if (findController) {
+                findController.setSearchString(searchTerm);
+                findController.moveToNextMatch();
+            }
+        }
+
+        function findPrevious(searchTerm) {
+            const findController = editorView.getContribution('editor.contrib.findController');
+            if (findController) {
+                findController.setSearchString(searchTerm);
+                findController.moveToPrevMatch();
+            }
+        }
+
+        function replaceAll(searchTerm, replacement) {
+            const model = editorView.getModel();
+            const fullText = model.getValue();
+            const newText = fullText.split(searchTerm).join(replacement);
+            const fullRange = model.getFullModelRange();
+            editorView.executeEdits(null, [{
+                range: fullRange,
+                text: newText
+            }]);
+        }
+
+        function getMatchCount(searchTerm) {
+            const model = editorView.getModel();
+            const text = model.getValue();
+            const matches = text.split(searchTerm).length - 1;
+            return matches;
+        }
+
+        // ========== Word Helper API ==========
+
+        function getWordAtPosition() {
+            const position = editorView.getPosition();
+            const model = editorView.getModel();
+            const wordInfo = model.getWordAtPosition(position);
+            return wordInfo ? wordInfo.word : null;
+        }
+
+        // ========== Hover Provider API ==========
+
+        var hoverProviders = {};
+
+        function registerHoverProvider(language) {
+            if (hoverProviders[language]) {
+                hoverProviders[language].dispose();
+            }
+
+            hoverProviders[language] = monaco.languages.registerHoverProvider(
+                language,
+                {
+                    provideHover: function (model, position) {
+                        if (typeof javaHoverProvider !== 'undefined') {
+                            const wordInfo = model.getWordAtPosition(position);
+                            const word = wordInfo ? wordInfo.word : '';
+
+                            const result = javaHoverProvider.provideHover(
+                                model.getValue(),
+                                position.lineNumber,
+                                position.column,
+                                word
+                            );
+
+                            if (result) {
+                                const parsed = JSON.parse(result);
+                                return {
+                                    contents: [{ value: parsed.value, isTrusted: parsed.isTrusted }]
+                                };
+                            }
+                        }
+                        return null;
+                    }
+                }
+            );
+        }
+
     </script>
 </body>
 

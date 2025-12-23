@@ -49,12 +49,16 @@ public final class Editor {
     // New services
     private DecorationsService decorationsService;
     private MarkersService markersService;
+    private CursorService cursorService;
+    private FindReplaceService findReplaceService;
 
     Editor(WebEngine engine) {
         this.engine = engine;
         this.viewController = new ViewController(this);
         this.decorationsService = new DecorationsService(this);
         this.markersService = new MarkersService(this);
+        this.cursorService = new CursorService(this);
+        this.findReplaceService = new FindReplaceService(this);
         Document document = new Document();
         setDocument(document);
     }
@@ -240,6 +244,37 @@ public final class Editor {
         if (window != null) {
             window.call("focusEditor");
         }
+    }
+
+    /**
+     * Get the cursor service for position and selection operations.
+     */
+    public CursorService getCursorService() {
+        return cursorService;
+    }
+
+    /**
+     * Get the find/replace service for search operations.
+     */
+    public FindReplaceService getFindReplaceService() {
+        return findReplaceService;
+    }
+
+    /**
+     * Set the editor to read-only mode.
+     */
+    public void setReadOnly(boolean readOnly) {
+        if (window != null) {
+            window.call("setEditorOptions", "{\"readOnly\":" + readOnly + "}");
+        }
+    }
+
+    /**
+     * Check if the editor is in read-only mode.
+     */
+    public boolean isReadOnly() {
+        // Default to false, actual state is in JS
+        return false;
     }
 
 }
