@@ -15,6 +15,8 @@ A powerful JavaFX wrapper for the [Monaco Editor](https://microsoft.github.io/mo
 </tr>
 </table>
 
+<p align="center"><i>Screenshots from the included demo app (<code>mvn javafx:run</code>)</i></p>
+
 ## Original Author
 
 This project was created by **[Michael Hoffer](https://github.com/miho)** ([@miaborgo](https://twitter.com/miaborgo)).
