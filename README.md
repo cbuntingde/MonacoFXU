@@ -1,6 +1,6 @@
 # MonacoFX
 
-> ⚠️ **Updated December 2024**: This project was originally created 4-5 years ago by [Michael Hoffer](https://github.com/miho). It has been updated by **Chris Bunting** to use Monaco Editor 0.52.0 with modern features. **This update has not yet been fully tested.**
+> ⚠️ **Updated December 2025**: This project was originally created 4-5 years ago by [Michael Hoffer](https://github.com/miho). It has been updated by **Chris Bunting** to use Monaco Editor 0.52.0 with modern features. **This update has not yet been fully tested.**
 
 JavaFX editor node based on the powerful [Monaco Editor](https://microsoft.github.io/monaco-editor/) that drives [VS Code](https://github.com/Microsoft/vscode).
 

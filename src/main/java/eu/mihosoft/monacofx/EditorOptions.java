@@ -1,6 +1,6 @@
 /*
  * MIT License
- * Copyright (c) 2020-2024 Michael Hoffer <info@michaelhoffer.de>. All rights reserved.
+ * Copyright (c) 2020-2025 Michael Hoffer <info@michaelhoffer.de>. All rights reserved.
  */
 package eu.mihosoft.monacofx;
 
