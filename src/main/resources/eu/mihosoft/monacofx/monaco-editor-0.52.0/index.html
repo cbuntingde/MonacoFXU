@@ -565,6 +565,91 @@
             );
         }
 
+        // ========== Definition Provider API (Go to Definition) ==========
+
+        var definitionProviders = {};
+
+        function registerDefinitionProvider(language) {
+            if (definitionProviders[language]) {
+                definitionProviders[language].dispose();
+            }
+
+            definitionProviders[language] = monaco.languages.registerDefinitionProvider(
+                language,
+                {
+                    provideDefinition: function (model, position, token) {
+                        if (typeof javaDefinitionProvider !== 'undefined') {
+                            const wordInfo = model.getWordAtPosition(position);
+                            const word = wordInfo ? wordInfo.word : '';
+
+                            const result = javaDefinitionProvider.provideDefinition(
+                                model.getValue(),
+                                position.lineNumber,
+                                position.column,
+                                word
+                            );
+
+                            if (result) {
+                                const locations = JSON.parse(result);
+                                return locations.map(loc => ({
+                                    uri: loc.uri ? monaco.Uri.parse(loc.uri) : model.uri,
+                                    range: {
+                                        startLineNumber: loc.range.startLineNumber,
+                                        startColumn: loc.range.startColumn,
+                                        endLineNumber: loc.range.endLineNumber,
+                                        endColumn: loc.range.endColumn
+                                    }
+                                }));
+                            }
+                        }
+                        return null;
+                    }
+                }
+            );
+        }
+
+        // ========== Code Actions API ==========
+
+        var codeActionProviders = {};
+
+        function registerCodeActionProvider(language) {
+            if (codeActionProviders[language]) {
+                codeActionProviders[language].dispose();
+            }
+
+            codeActionProviders[language] = monaco.languages.registerCodeActionProvider(
+                language,
+                {
+                    provideCodeActions: function (model, range, context, token) {
+                        if (typeof javaCodeActionProvider !== 'undefined') {
+                            const result = javaCodeActionProvider.provideCodeActions(
+                                model.getValue(),
+                                JSON.stringify({
+                                    startLineNumber: range.startLineNumber,
+                                    startColumn: range.startColumn,
+                                    endLineNumber: range.endLineNumber,
+                                    endColumn: range.endColumn
+                                }),
+                                JSON.stringify(context.markers.map(m => ({
+                                    message: m.message,
+                                    severity: m.severity,
+                                    startLineNumber: m.startLineNumber,
+                                    startColumn: m.startColumn,
+                                    endLineNumber: m.endLineNumber,
+                                    endColumn: m.endColumn
+                                })))
+                            );
+
+                            if (result) {
+                                return JSON.parse(result);
+                            }
+                        }
+                        return { actions: [], dispose: function () { } };
+                    }
+                }
+            );
+        }
+
     </script>
 </body>
 
